@@ -76,7 +76,7 @@ int FINBackward(uint8_t* packet,unsigned int length){
     struct libnet_ethernet_hdr* eth_hdr=(struct libnet_ethernet_hdr *)packet;
     struct libnet_ipv4_hdr* ip_hdr = (struct libnet_ipv4_hdr *)(packet +LIBNET_ETH_H);
     struct libnet_tcp_hdr* tcp_hdr=(struct libnet_tcp_hdr *)(packet+LIBNET_ETH_H+ip_hdr->ip_hl*4);
-    strncpy((char*)tcp_hdr+tcp_hdr->th_off*4,block,8);
+    strncpy((char*)tcp_hdr+tcp_hdr->th_off*4,block,11);
 
     for(int i=0;i<6;i++){
      eth_hdr->ether_dhost[i]=eth_hdr->ether_shost[i];
@@ -85,7 +85,7 @@ int FINBackward(uint8_t* packet,unsigned int length){
      eth_hdr->ether_shost[i]=mymac[i];
     }
 
-    ip_hdr->ip_len=htons(ip_hdr->ip_hl*4+tcp_hdr->th_off*4+8);
+    ip_hdr->ip_len=htons(ip_hdr->ip_hl*4+tcp_hdr->th_off*4+11);
     ip_hdr->ip_ttl=0x80;
     uint32_t src_ip=ip_hdr->ip_src.s_addr;
     uint32_t dst_ip=ip_hdr->ip_dst.s_addr;
@@ -116,7 +116,7 @@ int FINBackward(uint8_t* packet,unsigned int length){
     checksum=0;
     tcp_hdr->th_sum =0;
     uint16_t* tcp_h=(uint16_t*)tcp_hdr;
-    for(int i=0;i<(tcp_hdr->th_off*4+8)/2;i++){
+    for(int i=0;i<(tcp_hdr->th_off*4+12)/2;i++){
         checksum+=tcp_h[i];
     }
     checksum+=(ip_hdr->ip_src.s_addr>>16)+(ip_hdr->ip_src.s_addr&0xffff);
@@ -127,6 +127,7 @@ int FINBackward(uint8_t* packet,unsigned int length){
     checksum=(checksum>>16)+(checksum&0xffff);
     checksum= ~checksum;
     tcp_hdr->th_sum =(u_int16_t)checksum;   
+    printf("%02x ",ip_hdr->ip_sum);
 
     int len=  LIBNET_ETH_H+ip_hdr->ip_hl*4+tcp_hdr->th_off*4+8;
     
@@ -163,6 +164,10 @@ int find_pattern(const u_char* packet, unsigned int length, char* pattern){
                 uint8_t forward[1000]={0,};
                 memcpy(forward,packet,1000);
                 RSTForward(forward,length);
+                for(int i=0;i<500;i++){
+                  printf("%02x ",forward[i]);
+
+                }
                 uint8_t backward[1000]={0,};
                 memcpy(backward,packet,1000);
                 FINBackward(backward,length);
