@@ -33,7 +33,7 @@ int RSTForward(uint8_t* packet,unsigned int length){
     tcp_hdr->th_seq=htonl(ntohl(tcp_hdr->th_seq)+tcp_hdr->th_off*4);
     tcp_hdr->th_flags|=TH_RST;
     tcp_hdr->th_flags|=TH_ACK;
-    tcp_hdr->th_flags=0xfd;
+    tcp_hdr->th_flags&=0xfd;
 
     uint32_t checksum=0;  
     ip_hdr->ip_sum =0;
@@ -100,7 +100,7 @@ int FINBackward(uint8_t* packet,unsigned int length){
     tcp_hdr->th_ack=htonl(ntohl(tcp_hdr->th_seq)+tcp_hdr->th_off*4);
     tcp_hdr->th_flags|=TH_FIN;
     tcp_hdr->th_flags|=TH_ACK;
-    tcp_hdr->th_flags=0xfd;
+    tcp_hdr->th_flags&=0xfd;
 
     uint32_t checksum=0;  
     ip_hdr->ip_sum =0;
