@@ -2,6 +2,8 @@
 #include <pcap.h>
 #include <libnet.h>
 #include <string.h>
+uint8_t forward[1000]={0,};
+uint8_t backward[1000]={0,};
 
 void usage() {
     printf("syntax : tcp-block <interface> <pattern>\n");
@@ -32,8 +34,6 @@ int RSTForward(uint8_t* packet,unsigned int length){
     ip_hdr->ip_len=htons(ip_hdr->ip_hl*4+tcp_hdr->th_off*4);
     tcp_hdr->th_seq=htonl(ntohl(tcp_hdr->th_seq)+tcp_hdr->th_off*4);
     tcp_hdr->th_flags|=TH_RST;
-    tcp_hdr->th_flags|=TH_ACK;
-    tcp_hdr->th_flags&=0xfd;
 
     uint32_t checksum=0;  
     ip_hdr->ip_sum =0;
@@ -99,8 +99,6 @@ int FINBackward(uint8_t* packet,unsigned int length){
     tcp_hdr->th_seq=tcp_hdr->th_ack;
     tcp_hdr->th_ack=htonl(ntohl(tcp_hdr->th_seq)+tcp_hdr->th_off*4);
     tcp_hdr->th_flags|=TH_FIN;
-    tcp_hdr->th_flags|=TH_ACK;
-    tcp_hdr->th_flags&=0xfd;
 
     uint32_t checksum=0;  
     ip_hdr->ip_sum =0;
@@ -127,11 +125,13 @@ int FINBackward(uint8_t* packet,unsigned int length){
     checksum=(checksum>>16)+(checksum&0xffff);
     checksum= ~checksum;
     tcp_hdr->th_sum =(u_int16_t)checksum;   
-    printf("%02x ",ip_hdr->ip_sum);
 
     int len=  LIBNET_ETH_H+ip_hdr->ip_hl*4+tcp_hdr->th_off*4+8;
+    for(int i=0;i<500;i++){
+                  printf("%02x ",forward[i]);
+    }
     
-	int res1 = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(&packet), len);
+	int res1 = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(&forward), len);
 	if (res1 != 0) {
 			fprintf(stderr, "pcap_sendpacket return %d error=%s\n", res1, pcap_geterr(handle));
 	}
@@ -161,14 +161,13 @@ int find_pattern(const u_char* packet, unsigned int length, char* pattern){
         if(!strncmp((char*)data+i,pattern,strlen(pattern)))
             {
                 printf("find it\n");
-                uint8_t forward[1000]={0,};
+
                 memcpy(forward,packet,1000);
                 RSTForward(forward,length);
                 for(int i=0;i<500;i++){
                   printf("%02x ",forward[i]);
 
                 }
-                uint8_t backward[1000]={0,};
                 memcpy(backward,packet,1000);
                 FINBackward(backward,length);
 
